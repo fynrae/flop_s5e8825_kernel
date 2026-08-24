@@ -1579,6 +1579,7 @@ static int goodix_ts_probe(struct platform_device *pdev)
 	/* touch core layer is a platform driver */
 	ts->pdev = pdev;
 	ts->bus = bus_interface;
+	spin_lock_init(&ts->scrub_lock);
 	ts->prox_last_report = 0xFF;
 
 	if (IS_ENABLED(CONFIG_OF) && bus_interface->dev->of_node) {

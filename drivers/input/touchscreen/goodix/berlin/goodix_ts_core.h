@@ -626,6 +626,11 @@ struct goodix_ts_data {
 	bool sponge_dump_delayed_flag;
 	u8 sponge_dump_delayed_area;
 	u16 sponge_dump_border;
+
+	spinlock_t scrub_lock;
+	unsigned int scrub_id;
+	unsigned int scrub_x;
+	unsigned int scrub_y;
 };
 
 /* external module structures */
@@ -810,6 +815,8 @@ int goodix_read_nvm_data(struct goodix_ts_data *ts, unsigned char *data, int siz
 
 int goodix_ts_cmd_init(struct goodix_ts_data *ts);
 void goodix_ts_cmd_remove(struct goodix_ts_data *ts);
+void goodix_set_scrub_pos(struct goodix_ts_data *ts, unsigned int id,
+		unsigned int x, unsigned int y);
 
 int goodix_ts_power_on(struct goodix_ts_data *ts);
 int goodix_ts_power_off(struct goodix_ts_data *ts);

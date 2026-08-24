@@ -17,6 +17,7 @@
  */
 #include "goodix_ts_core.h"
 #include <linux/workarounds.h>
+#include <linux/sysfs.h>
 
 int goodix_set_cmd(struct goodix_ts_data *ts, u8 reg, u8 mode)
 {
@@ -33,6 +34,43 @@ int goodix_set_cmd(struct goodix_ts_data *ts, u8 reg, u8 mode)
 
 	return ret;
 }
+
+void goodix_set_scrub_pos(struct goodix_ts_data *ts, unsigned int id,
+		unsigned int x, unsigned int y)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&ts->scrub_lock, flags);
+	ts->scrub_id = id;
+	ts->scrub_x = x;
+	ts->scrub_y = y;
+	spin_unlock_irqrestore(&ts->scrub_lock, flags);
+
+	if (ts->sec.fac_dev)
+		sysfs_notify(&ts->sec.fac_dev->kobj, NULL, "scrub_pos");
+}
+
+static ssize_t scrub_pos_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct sec_cmd_data *sec = dev_get_drvdata(dev);
+	struct goodix_ts_data *ts = container_of(sec, struct goodix_ts_data, sec);
+	unsigned long flags;
+	unsigned int id, x, y;
+
+	spin_lock_irqsave(&ts->scrub_lock, flags);
+	id = ts->scrub_id;
+	x = ts->scrub_x;
+	y = ts->scrub_y;
+	ts->scrub_id = 0;
+	ts->scrub_x = 0;
+	ts->scrub_y = 0;
+	spin_unlock_irqrestore(&ts->scrub_lock, flags);
+
+	return scnprintf(buf, PAGE_SIZE, "%u %u %u\n", id, x, y);
+}
+
+static DEVICE_ATTR_RO(scrub_pos);
 
 static void fw_update(void *device_data)
 {
@@ -3398,6 +3436,7 @@ static DEVICE_ATTR_RO(fod_info);
 static DEVICE_ATTR_RO(get_lp_dump);
 
 static struct attribute *cmd_attributes[] = {
+	&dev_attr_scrub_pos.attr,
 	&dev_attr_hw_param.attr,
 	&dev_attr_sensitivity_mode.attr,
 	&dev_attr_single_driving.attr,
@@ -3433,4 +3472,3 @@ void goodix_ts_cmd_remove(struct goodix_ts_data *ts)
 	ts_info("called");
 	sec_cmd_exit(&ts->sec, SEC_CLASS_DEVT_TSP);
 }
-
