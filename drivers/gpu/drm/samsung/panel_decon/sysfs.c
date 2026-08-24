@@ -4238,6 +4238,48 @@ static ssize_t actual_mask_brightness_show(struct device *dev,
 }
 #endif
 
+static ssize_t smooth_dim_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct panel_device *panel = dev_get_drvdata(dev);
+	struct panel_bl_device *panel_bl;
+
+	if (panel == NULL) {
+		panel_err("panel is null\n");
+		return -EINVAL;
+	}
+
+	panel_bl = &panel->panel_bl;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", panel_bl->props.smooth_transition);
+}
+
+static ssize_t smooth_dim_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct panel_device *panel = dev_get_drvdata(dev);
+	struct panel_bl_device *panel_bl;
+	int value, rc;
+
+	rc = kstrtouint(buf, 0, &value);
+	if (rc < 0)
+		return rc;
+
+	if (panel == NULL) {
+		panel_err("panel is null\n");
+		return -EINVAL;
+	}
+
+	panel_bl = &panel->panel_bl;
+	mutex_lock(&panel_bl->lock);
+	panel_bl->props.smooth_transition = value ? SMOOTH_TRANS_ON : SMOOTH_TRANS_OFF;
+	mutex_unlock(&panel_bl->lock);
+
+	panel_info("smooth_dim=%d\n", panel_bl->props.smooth_transition);
+
+	return size;
+}
+
 #define DISP_TE_POLL_SLEEP_USEC (10UL)
 #define DISP_TE_POLL_TIMEOUT_USEC (400 * 1000UL)
 static ssize_t te_check_show(struct device *dev,
@@ -4415,6 +4457,7 @@ struct device_attribute panel_attrs[] = {
 	__PANEL_ATTR_RW(mask_brightness, 0664),
 	__PANEL_ATTR_RO(actual_mask_brightness, 0444),
 #endif
+	__PANEL_ATTR_RW(smooth_dim, 0664),
 #ifdef CONFIG_SUPPORT_BRIGHTDOT_TEST
 	__PANEL_ATTR_RW(brightdot, 0664),
 #endif

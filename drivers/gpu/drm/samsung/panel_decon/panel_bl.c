@@ -1177,6 +1177,11 @@ __visible_for_testing int panel_bl_init_backlight_device_property(struct panel_b
 	panel_bl->bd->props.max_brightness =
 		get_subdev_max_brightness(panel_bl, panel_bl->props.id);
 
+#ifdef CONFIG_SUPPORT_MASK_LAYER
+	/* UDFPS mask/HBM uses the panel's configured maximum brightness. */
+	panel_bl->props.mask_layer_br_target = panel_bl->bd->props.max_brightness;
+#endif
+
 	return 0;
 }
 
