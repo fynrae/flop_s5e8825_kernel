@@ -462,14 +462,17 @@ static void stm_ts_gesture_event(struct stm_ts_data *ts, u8 *event_buff)
 	} else if (p_gesture_status->stype  == STM_TS_SPONGE_EVENT_PRESS) {
 		if (p_gesture_status->gesture_id == STM_TS_SPONGE_EVENT_GESTURE_ID_FOD_LONG ||
 			p_gesture_status->gesture_id == STM_TS_SPONGE_EVENT_GESTURE_ID_FOD_NORMAL) {
+			stm_ts_set_scrub_pos(ts, SPONGE_EVENT_TYPE_FOD_PRESS, x, y);
 			sec_cmd_send_gesture_uevent(&ts->sec, SPONGE_EVENT_TYPE_FOD_PRESS, x, y);
 			input_info(true, ts->dev, "%s: FOD %sPRESS\n",
 					__func__, p_gesture_status->gesture_id ? "" : "LONG");
 		} else if (p_gesture_status->gesture_id == STM_TS_SPONGE_EVENT_GESTURE_ID_FOD_RELEASE) {
+			stm_ts_set_scrub_pos(ts, SPONGE_EVENT_TYPE_FOD_RELEASE, x, y);
 			sec_cmd_send_gesture_uevent(&ts->sec, SPONGE_EVENT_TYPE_FOD_RELEASE, x, y);
 			input_info(true, ts->dev, "%s: FOD RELEASE\n", __func__);
 			memset(ts->plat_data->fod_data.vi_data, 0x0, ts->plat_data->fod_data.vi_size);
 		} else if (p_gesture_status->gesture_id == STM_TS_SPONGE_EVENT_GESTURE_ID_FOD_OUT) {
+			stm_ts_set_scrub_pos(ts, SPONGE_EVENT_TYPE_FOD_OUT, x, y);
 			sec_cmd_send_gesture_uevent(&ts->sec, SPONGE_EVENT_TYPE_FOD_OUT, x, y);
 			input_info(true, ts->dev, "%s: FOD OUT\n", __func__);
 		} else if (p_gesture_status->gesture_id == STM_TS_SPONGE_EVENT_GESTURE_ID_FOD_VI) {
@@ -1260,6 +1263,8 @@ static void stm_ts_parse_dt(struct device *dev, struct stm_ts_data *ts)
 int stm_ts_init(struct stm_ts_data *ts)
 {
 	int ret = 0;
+
+	spin_lock_init(&ts->scrub_lock);
 
 	ret = sec_input_parse_dt(ts->dev);
 	if (ret) {

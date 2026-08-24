@@ -20,19 +20,39 @@ enum ito_error_type {
 	ITO_KEY_OPEN			= 0x68
 };
 
+void stm_ts_set_scrub_pos(struct stm_ts_data *ts, unsigned int id,
+		unsigned int x, unsigned int y)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&ts->scrub_lock, flags);
+	ts->scrub_id = id;
+	ts->scrub_x = x;
+	ts->scrub_y = y;
+	spin_unlock_irqrestore(&ts->scrub_lock, flags);
+
+	if (ts->sec.fac_dev)
+		sysfs_notify(&ts->sec.fac_dev->kobj, NULL, "scrub_pos");
+}
+
 static ssize_t scrub_pos_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct stm_ts_data *ts = container_of(sec, struct stm_ts_data, sec);
-	int id = ts->plat_data->gesture_id;
-	int x = ts->plat_data->gesture_x;
-	int y = ts->plat_data->gesture_y;
+	unsigned long flags;
+	unsigned int id, x, y;
 
-	ts->plat_data->gesture_x = 0;
-	ts->plat_data->gesture_y = 0;
+	spin_lock_irqsave(&ts->scrub_lock, flags);
+	id = ts->scrub_id;
+	x = ts->scrub_x;
+	y = ts->scrub_y;
+	ts->scrub_id = 0;
+	ts->scrub_x = 0;
+	ts->scrub_y = 0;
+	spin_unlock_irqrestore(&ts->scrub_lock, flags);
 
-	return snprintf(buf, PAGE_SIZE, "%d %d %d\n", id, x, y);
+	return scnprintf(buf, PAGE_SIZE, "%u %u %u\n", id, x, y);
 }
 
 /* read param */

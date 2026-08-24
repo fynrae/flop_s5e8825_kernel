@@ -411,6 +411,10 @@ struct stm_ts_data {
 	struct mutex lock;
 	bool probe_done;
 	struct sec_cmd_data sec;
+	spinlock_t scrub_lock;
+	unsigned int scrub_id;
+	unsigned int scrub_x;
+	unsigned int scrub_y;
 	int tx_count;
 	int rx_count;
 	u8 *read_buf;
@@ -573,6 +577,8 @@ struct stm_ts_data {
 int stm_ts_stop_device(void *data);
 int stm_ts_start_device(void *data);
 irqreturn_t stm_ts_irq_thread(int irq, void *ptr);
+void stm_ts_set_scrub_pos(struct stm_ts_data *ts, unsigned int id,
+		unsigned int x, unsigned int y);
 int stm_ts_probe(struct device *dev);
 int stm_ts_remove(struct stm_ts_data *ts);
 void stm_ts_shutdown(struct stm_ts_data *ts);
@@ -711,4 +717,3 @@ void stm_ts_trusted_touch_tvm_i2c_failure_report(struct stm_ts_data *ts);
 #endif
 
 #endif /* _LINUX_STM_TS_H_ */
-
