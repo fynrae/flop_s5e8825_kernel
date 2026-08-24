@@ -64,6 +64,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/pm_wakeup.h>
 #include <linux/bitmap.h>
+#include <linux/spinlock.h>
 #include "focaltech_reg.h"
 #include "focaltech_common.h"
 
@@ -209,6 +210,10 @@ struct fts_ts_data {
 	struct sec_ts_plat_data *pdata;
 	struct ts_ic_info ic_info;
 	struct sec_cmd_data sec;
+	spinlock_t scrub_lock;
+	unsigned int scrub_id;
+	unsigned int scrub_x;
+	unsigned int scrub_y;
 	struct workqueue_struct *ts_workqueue;
 	struct delayed_work esdcheck_work;
 	struct delayed_work prc_work;
@@ -402,6 +407,8 @@ void fts_irq_enable(void);
 
 int fts_read_fod_data(struct fts_ts_data *ts_data);
 int fts_set_fod_rect(struct fts_ts_data *ts_data);
+void fts_set_scrub_pos(struct fts_ts_data *ts_data, unsigned int id,
+		unsigned int x, unsigned int y);
 int fts_set_refresh_rate(struct fts_ts_data *ts_data);
 
 int fts_ts_power_on(struct fts_ts_data *ts_data);

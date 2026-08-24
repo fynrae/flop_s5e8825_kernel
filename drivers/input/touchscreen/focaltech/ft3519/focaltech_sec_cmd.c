@@ -35,6 +35,21 @@ int read_mass_data(u8 addr, int byte_num, int *buf);
 static void fts_print_frame(struct fts_ts_data *ts, short *min, short *max);
 static void fts_print_scap_frame(int *data, int *min, int *max);
 
+void fts_set_scrub_pos(struct fts_ts_data *ts_data, unsigned int id,
+		unsigned int x, unsigned int y)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&ts_data->scrub_lock, flags);
+	ts_data->scrub_id = id;
+	ts_data->scrub_x = x;
+	ts_data->scrub_y = y;
+	spin_unlock_irqrestore(&ts_data->scrub_lock, flags);
+
+	if (ts_data->sec.fac_dev)
+		sysfs_notify(&ts_data->sec.fac_dev->kobj, NULL, "scrub_pos");
+}
+
 static int fts_wait_test_done(u8 cmd, u8 mode, int delayms)
 {
 	int i, ret;
@@ -622,14 +637,19 @@ static ssize_t scrub_pos_show(struct device *dev,
 {
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct fts_ts_data *ts_data = container_of(sec, struct fts_ts_data, sec);
-	int id = ts_data->pdata->gesture_id;
-	int x = ts_data->pdata->gesture_x;
-	int y = ts_data->pdata->gesture_y;
+	unsigned long flags;
+	unsigned int id, x, y;
 
-	ts_data->pdata->gesture_x = 0;
-	ts_data->pdata->gesture_y = 0;
+	spin_lock_irqsave(&ts_data->scrub_lock, flags);
+	id = ts_data->scrub_id;
+	x = ts_data->scrub_x;
+	y = ts_data->scrub_y;
+	ts_data->scrub_id = 0;
+	ts_data->scrub_x = 0;
+	ts_data->scrub_y = 0;
+	spin_unlock_irqrestore(&ts_data->scrub_lock, flags);
 
-	return snprintf(buf, PAGE_SIZE, "%d %d %d\n", id, x, y);
+	return scnprintf(buf, PAGE_SIZE, "%u %u %u\n", id, x, y);
 }
 
 static DEVICE_ATTR_RW(hw_param);
@@ -2931,6 +2951,7 @@ static void fod_enable(void *device_data)
 
 		if (!(ts_data->fod_mode & 0x01)) {
 			ts_data->fod_state = 2;
+			fts_set_scrub_pos(ts_data, SPONGE_EVENT_TYPE_FOD_RELEASE, 540, 2190);
 			sec_cmd_send_gesture_uevent(&ts_data->sec, SPONGE_EVENT_TYPE_FOD_RELEASE, 540, 2190);
 
 		}
@@ -3936,4 +3957,3 @@ void fts_sec_cmd_exit(struct fts_ts_data *ts_data)
 }
 
 MODULE_LICENSE("GPL");
-

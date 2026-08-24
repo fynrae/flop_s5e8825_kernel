@@ -984,14 +984,17 @@ static int old_fts_read_fod_result(struct fts_ts_data *ts_data)
 
 	// #0 : long press, #1 : press, #2 : release, #3 : out of area, 0xff : no event
 	if (val == 0 || val == 1) {
+		fts_set_scrub_pos(ts_data, SPONGE_EVENT_TYPE_FOD_PRESS, x, y);
 		sec_cmd_send_gesture_uevent(&ts_data->sec, SPONGE_EVENT_TYPE_FOD_PRESS, x, y);
 
 		FTS_INFO("FOD %s PRESS (x:%d, y:%d)", val ? "" : "LONG", x, y); // Log coords if helpful
 	} else if (val == 2) {
+		fts_set_scrub_pos(ts_data, SPONGE_EVENT_TYPE_FOD_RELEASE, x, y);
 		sec_cmd_send_gesture_uevent(&ts_data->sec, SPONGE_EVENT_TYPE_FOD_RELEASE, x, y);
 
 		FTS_INFO("FOD RELEASE (x:%d, y:%d)", x, y);
 	} else if (val == 3) {
+		fts_set_scrub_pos(ts_data, SPONGE_EVENT_TYPE_FOD_OUT, x, y);
 		sec_cmd_send_gesture_uevent(&ts_data->sec, SPONGE_EVENT_TYPE_FOD_OUT, x, y);
 
 		FTS_INFO("FOD OUT (x:%d, y:%d)", x, y);
@@ -1034,11 +1037,14 @@ static int fts_read_fod_result(struct fts_ts_data *ts_data)
 
 	// #0 : long press, #1 : press, #2 : release, #3 : out of area, 0xff : no event
 	if (val == 0 || val == 1) {
+		fts_set_scrub_pos(ts_data, SPONGE_EVENT_TYPE_FOD_PRESS, x, y);
 		sec_cmd_send_gesture_uevent(&ts_data->sec, SPONGE_EVENT_TYPE_FOD_PRESS, x, y);
 		FTS_INFO("FOD %s PRESS", val ? "" : "LONG");
 	} else if (val == 2) {
+		fts_set_scrub_pos(ts_data, SPONGE_EVENT_TYPE_FOD_RELEASE, x, y);
 		sec_cmd_send_gesture_uevent(&ts_data->sec, SPONGE_EVENT_TYPE_FOD_RELEASE, x, y);
 	} else if (val == 3) {
+		fts_set_scrub_pos(ts_data, SPONGE_EVENT_TYPE_FOD_OUT, x, y);
 		sec_cmd_send_gesture_uevent(&ts_data->sec, SPONGE_EVENT_TYPE_FOD_OUT, x, y);
 	} else if (val == 0xff) {
 		FTS_INFO("fod has no event");
@@ -2207,6 +2213,7 @@ static int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 	mutex_init(&ts_data->bus_lock);
 	mutex_init(&ts_data->device_lock);
 	mutex_init(&ts_data->irq_lock);
+	spin_lock_init(&ts_data->scrub_lock);
 
 	/* Init communication interface */
 	ret = fts_bus_init(ts_data);
